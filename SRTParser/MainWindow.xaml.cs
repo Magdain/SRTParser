@@ -24,15 +24,16 @@ namespace SRTParser
         {
             InitializeComponent();
 
-            subtitleList.Columns.Add(new DataGridTextColumn() { Header = "Start",       Binding = new Binding("Start") });
-            subtitleList.Columns.Add(new DataGridTextColumn() { Header = "End",         Binding = new Binding("End") });
-            //subtitleList.Columns.Add(new DataGridTextColumn() { Header = "Duration",    Binding = new Binding("Duration") });
-            subtitleList.Columns.Add(new DataGridTextColumn() { Header = "Content",     Binding = new Binding("Content") });
+            subtitleList.Columns.Add(new DataGridTextColumn() { Header = "Start",       Binding = new Binding("Start"),     CanUserResize = false });
+            subtitleList.Columns.Add(new DataGridTextColumn() { Header = "End",         Binding = new Binding("End"),       CanUserResize = false });
+            subtitleList.Columns.Add(new DataGridTextColumn() { Header = "Duration",    Binding = new Binding("Duration"),  CanUserResize = false });
+            subtitleList.Columns.Add(new DataGridTextColumn() { Header = "Content",     Binding = new Binding("Content"),   CanUserResize = false });
+            subtitleList.Columns.Add(new DataGridTextColumn() { Header = "Size",        Binding = new Binding("Size"),      CanUserResize = false });
 
             var subtitles = Subtitle.Parse("../../test.srt");
             for (var i = 0; i < subtitles.Count; ++i)
             {
-                subtitleList.Items.Add((Subtitle)subtitles[i]);
+                subtitleList.Items.Add(subtitles[i]);
             }
         }
     }
