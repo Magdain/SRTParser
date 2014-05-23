@@ -8,56 +8,11 @@ using System.Text.RegularExpressions;
 
 namespace SRTParser
 {
-    class Timestamp
-    {
-        public int Hours, Minutes, Seconds, Milliseconds;
-        private string _value;
-        public Timestamp(string value)
-        {
-            var tokens = value.Split(':');
-            if (tokens.Length == 3)
-            {
-                Hours = int.Parse(tokens[0]);
-                Minutes = int.Parse(tokens[1]);
-
-                var sms = tokens[2].Split(',');
-                if (sms.Length == 2)
-                {
-                    Seconds = int.Parse(sms[0]);
-                    Milliseconds = int.Parse(sms[1]);
-                }
-                else
-                {
-                    throw new Exception("Timestamp expects a comma delimited seconds,milliseconds value.");
-                }
-
-                _value = value;
-            }
-            else
-            {
-                throw new Exception("Timestamp expects three values delimited by a colon.");
-            }
-        }
-        public Timestamp(int hours, int minutes, int seconds, int milliseconds)
-        {
-            Hours = hours;
-            Minutes = minutes;
-            Seconds = seconds;
-            Milliseconds = milliseconds;
-            _value = string.Format("{0}:{1}:{2},{3}", Hours, Minutes, Seconds, Milliseconds);
-        }
-
-        public override string ToString()
-        {
-            return _value;
-        }
-    }
-
     class Subtitle
     {
         public int Index { get; set; }
-        private Timestamp _start;
-        public Timestamp Start
+        private TimeSpan _start;
+        public TimeSpan Start
         { 
             get
             {
@@ -66,10 +21,13 @@ namespace SRTParser
             set
             {
                 _start = value;
+
+                if (End != null)
+                    Duration = End.Subtract(Start).Duration();
             }
         }
-        public Timestamp _end;
-        public Timestamp End
+        public TimeSpan _end;
+        public TimeSpan End
         {
             get
             {
@@ -78,12 +36,24 @@ namespace SRTParser
             set
             {
                 _end = value;
-                Duration = new Timestamp(End.Hours - Start.Hours, End.Minutes - Start.Minutes, End.Seconds - Start.Seconds, End.Milliseconds - Start.Milliseconds);
-                Console.WriteLine(Duration);
+                Duration = End.Subtract(Start).Duration();
             }
         }
-        public Timestamp Duration { get; set; }
-        public string Content { get; set; }
+        public TimeSpan Duration { get; set; }
+        private string _content;
+        public string Content
+        {
+            get
+            {
+                return _content;
+            }
+            set
+            {
+                _content = value;
+                Size = Content.Length;
+                // TODO: Change this to a string and count line breaks separately.
+            }
+        }
         public int Size { get; set; }
 
         private static Regex _regex = new Regex(@"-->");
@@ -100,29 +70,61 @@ namespace SRTParser
                 {
                     int index;
                     var split = _regex.Split(line);
-                    if (line == String.Empty) // A blank line.
+                    if (line == String.Empty) // A blank line, signaling that this caption group is done.
                     {
+                        // Easiest way (that is, no additional state required) is to make sure there's newlines between manually broken
+                        // caption groups is to add newlines at the end of every line of text and then remove the very last line break.
+                        curSub.Content = curSub.Content.TrimEnd('\r', '\n');
                         subtitles.Add(curSub);
 
                         curSub = new Subtitle();
                         continue;
                     }
-                    else if (int.TryParse(line, out index)) // A subtitle number.
+                    else if (int.TryParse(line, out index)) // subtitle number
                         curSub.Index = index;
-                    else if (split.Length > 1) // A --> delimited start and end timestamp.
+                    else if (split.Length > 1) // "start timespan --> end timespan"
                     {
-                        curSub.Start = new Timestamp(split[0]);
-                        curSub.End = new Timestamp(split[1]);
+                        curSub.Start = ParseTimeSpan(split[0]);
+                        curSub.End = ParseTimeSpan(split[1]);
                     }
-                    else
+                    else // non-blank text
                     {
-                        curSub.Content += line;
+                        curSub.Content += line + Environment.NewLine;
                     }
                 }
                 stream.Close();
             }
 
             return subtitles.OrderBy(ts => ts.Index).ToList();
+        }
+
+        private static TimeSpan ParseTimeSpan(string value)
+        {
+            int h, m, s, ms;
+
+            var tokens = value.Split(':');            
+            if (tokens.Length == 3)
+            {
+                h = int.Parse(tokens[0]);
+                m = int.Parse(tokens[1]);
+
+                var sms = tokens[2].Split(',');
+                if (sms.Length == 2)
+                {
+                    s = int.Parse(sms[0]);
+                    ms = int.Parse(sms[1]);
+                }
+                else
+                {
+                    throw new Exception("Subtitle: Correct format is HH:MM:SS,MS.");
+                }
+            }
+            else
+            {
+                throw new Exception("Subtitle: Correct format is HH:MM:SS,MS.");
+            }
+
+            return new TimeSpan(0, h, m, s, ms);
         }
     }
 }
