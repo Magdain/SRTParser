@@ -1,6 +1,6 @@
 SRTParser
 =========
-A very basic .SRT (SubRip) file parser. Project includes a WPF application with example usage, but Subtitle.cs is a standlone file that can be used in your own project.
+A very basic .SRT (SubRip) file parser. Project includes a WPF application with example usage, but Subtitle.cs is a standalone file that can be used in your own project.
 
 ```
 List<Subtitle> subtitles = SRTParser.Subtitle.Parse("myfile.srt");
